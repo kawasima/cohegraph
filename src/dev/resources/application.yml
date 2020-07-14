@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: cohegraph
+server:
+  port: 9000
+graphql:
+  servlet:
+    actuator-metrics: true
+    mapping: /graphql
+    enabled: true
+    corsEnabled: true
+    exception-handlers-enabled: true
+    contextSetting: PER_REQUEST_WITH_INSTRUMENTATION
+  tools:
+    schema-location-pattern: "**/*.graphqls"
+    introspection-enabled: true
+graphiql:
+  enabled: true
+  mapping: /graphiql
+  endpoint:
+    graphql: /graphql
