@@ -22,10 +22,10 @@ import java.util.stream.Collectors;
 
 public class GraphQLEntryProcessor<K, V> extends AbstractProcessor<K, V, V> {
     private final Map<String, JoinProcessor> joinProcessors = new HashMap<>();
-    private final graphql.language.Field field;
+    private final FieldSelection fieldSelection;
 
-    public GraphQLEntryProcessor(Class<V> modelClass, graphql.language.Field field) {
-        this.field = field;
+    public GraphQLEntryProcessor(Class<V> modelClass, FieldSelection fieldSelection) {
+        this.fieldSelection = fieldSelection;
         Arrays.stream(modelClass.getDeclaredFields())
                 .filter(f -> f.getAnnotation(JoinCache.class) != null)
                 .map(f -> joinCache(modelClass, f))
@@ -54,24 +54,21 @@ public class GraphQLEntryProcessor<K, V> extends AbstractProcessor<K, V, V> {
             throw new IllegalStateException(e);
         }
     }
+
     @Override
     public V process(InvocableMap.Entry<K, V> entry) {
         V value = entry.getValue();
         BackingMapManagerContext managerContext = ((BinaryEntry<K, V>) entry).getContext();
         Converter<Object, Binary> keyToInternalConverter = managerContext.getKeyToInternalConverter();
-        List<graphql.language.Field> childFields = field.getSelectionSet().getSelections()
-                .stream()
-                .filter(graphql.language.Field.class::isInstance)
-                .map(graphql.language.Field.class::cast)
-                .collect(Collectors.toList());
+        List<FieldSelection> childSelections = fieldSelection.getChildren();
 
         joinProcessors.entrySet()
                 .stream()
-                .filter(e -> childFields.stream()
-                        .anyMatch(f -> f.getName().equals(e.getKey())))
+                .filter(e -> childSelections.stream()
+                        .anyMatch(s -> s.getName().equals(e.getKey())))
                 .forEach(e -> {
-                    graphql.language.Field field = childFields.stream()
-                            .filter(f -> f.getName().equals(e.getKey()))
+                    FieldSelection childSelection = childSelections.stream()
+                            .filter(s -> s.getName().equals(e.getKey()))
                             .findFirst()
                             .orElseThrow();
                     BackingMapContext context = managerContext.getBackingMapContext(e.getValue().getCacheName());
@@ -81,14 +78,14 @@ public class GraphQLEntryProcessor<K, V> extends AbstractProcessor<K, V, V> {
                                 .map(i -> {
                                     Binary key = keyToInternalConverter.convert(i);
                                     InvocableMap.Entry childEntry = context.getReadOnlyEntry(key);
-                                    return new GraphQLEntryProcessor<>(childEntry.getValue().getClass(), field)
+                                    return new GraphQLEntryProcessor<>(childEntry.getValue().getClass(), childSelection)
                                             .process(childEntry);
                                 }).collect(Collectors.toList());
                         e.getValue().setProperty(value, properties);
                     } else {
                         Binary key = keyToInternalConverter.convert(id);
                         InvocableMap.Entry propertyEntry = context.getReadOnlyEntry(key);
-                        Object prop = new GraphQLEntryProcessor<>(propertyEntry.getValue().getClass(), field)
+                        Object prop = new GraphQLEntryProcessor<>(propertyEntry.getValue().getClass(), childSelection)
                                 .process(propertyEntry);
                         e.getValue().setProperty(value, prop);
                     }

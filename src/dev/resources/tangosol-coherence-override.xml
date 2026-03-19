@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+
+<coherence xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns="http://xmlns.oracle.com/coherence/coherence-operational-config"
+           xsi:schemaLocation="http://xmlns.oracle.com/coherence/coherence-operational-config coherence-operational-config.xsd">
+
+  <cluster-config>
+    <unicast-listener>
+      <well-known-addresses>
+        <socket-address id="1">
+          <address>127.0.0.1</address>
+          <port>7574</port>
+        </socket-address>
+      </well-known-addresses>
+    </unicast-listener>
+  </cluster-config>
+</coherence>
